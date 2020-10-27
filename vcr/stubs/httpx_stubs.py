@@ -49,14 +49,27 @@ def _from_serialized_headers(headers):
 @patch("httpx.Response.read", MagicMock())
 def _from_serialized_response(request, serialized_response, history=None):
     content = serialized_response.get("content").encode()
-    response = httpx.Response(
-        status_code=serialized_response.get("status_code"),
-        request=request,
-        http_version=serialized_response.get("http_version"),
-        headers=_from_serialized_headers(serialized_response.get("headers")),
-        content=content,
-        history=history or [],
-    )
+    try:
+        response = httpx.Response(
+            status_code=serialized_response.get("status_code"),
+            request=request,
+            http_version=serialized_response.get("http_version"),
+            headers=_from_serialized_headers(serialized_response.get("headers")),
+            content=content,
+            history=history or [],
+        )
+    except TypeError:
+        """
+        httpx 0.16.1 fails with http_version argument, this check is to work with
+        both httpx 0.12.X and 0.16.1
+        """
+        response = httpx.Response(
+            status_code=serialized_response.get("status_code"),
+            request=request,
+            headers=_from_serialized_headers(serialized_response.get("headers")),
+            content=content,
+            history=history or [],
+        )
     response._content = content
     return response
 
